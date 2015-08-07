@@ -1,0 +1,356 @@
+<?php
+/**
+ * Implements hook_schema().
+ */
+function show_schema() {
+  $schema = array();
+
+  $schema['show_instruments'] = array(
+    'description' => 'The base table for the Instrument entity',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Primary key of the Instrument entity',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'Instrument name.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install()
+ */
+function show_install() {
+  node_types_rebuild();
+  $types = node_type_get_types();
+  node_add_body_field($types['show']);
+  add_custom_fields();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function show_uninstall() {
+    $ournewtype = 'show';
+    $sql = 'SELECT nid FROM {node} n WHERE n.type = :type';
+    $result = db_query($sql, array(':type' => $ournewtype));
+    $nodeids = array();
+    foreach ($result as $row) {
+        $nodeids[] = $row->nid;
+    }
+    node_delete_multiple($nodeids);
+    delete_custom_fields();
+    node_type_delete($ournewtype);
+    field_purge_batch(500);
+}
+
+/**
+ * Implements hook_enable()
+ */
+function show_enable() {
+  $role = new stdClass();
+  $role->name = 'musician';
+  // $role->weight = 10;
+  user_role_save($role);
+
+  add_vocabularies();
+}
+
+function add_vocabularies() {
+  $vocabularies = taxonomy_vocabulary_get_names();
+  $found = false;
+  foreach ($vocabularies as $key => $value) {
+    if ($key == 'show_type') {
+      $found = true;
+    }
+  }
+
+  dpm($found);
+
+  if ($found == false) {
+    dpm($found);
+    // arrays are more convenient to initialize
+    $vocabulary = array(
+       'name' => t('Show type'),
+       'machine_name' => 'show_type',
+       'description' => t('The show types, e.g. Wedding, Pub, Festival'),
+       'hierarchy' => 1,
+       'module' => 'show', // or nothing
+       'weight' => 1
+     );
+     // argument must be an object
+     $vocabulary = (object) $vocabulary;
+     taxonomy_vocabulary_save($vocabulary);
+     // horray, we have a vid now
+     $vid = $vocabulary->vid;
+
+     foreach(_taxonomy_terms() as $term => $description) {
+       $termObject = (object) array(
+         'name' => $term,
+         'description' => $description,
+         'vid' => $vid,
+       );
+
+       taxonomy_term_save($termObject);
+     }
+  }
+
+  $vocabularies = taxonomy_vocabulary_get_names();
+  dpm($vocabularies);
+}
+
+function add_custom_fields() {
+    foreach (_taxonomy_fields() as $field) {
+        field_create_field($field);
+    }
+    foreach (_taxonomy_field_instances() as $fieldinstance) {
+        $fieldinstance['entity_type'] = 'node';
+        $fieldinstance['bundle'] = 'show';
+        dpm($fieldinstance);
+        field_create_instance($fieldinstance);
+    }
+}
+
+function delete_custom_fields() {
+    foreach (array_keys(_taxonomy_fields()) as $field) {
+        field_delete_field($field);
+    }
+    $instances = field_info_instances('node', 'show');
+    foreach ($instances as $instance_name => $fieldinstance) {
+        field_delete_instance($fieldinstance);
+    }
+}
+
+/**
+ *  Return array of taxonomy and descriptions
+ */
+function _taxonomy_terms() {
+    $terms = array(
+        'Wedding' => 'a show for a wedding',
+        'Pub' => 'a show in a pub',
+        'Festival' => 'a show at a festival',
+    );
+
+    return $terms;
+}
+
+/**
+ *  Return fields
+ */
+function _taxonomy_fields() {
+  $t = get_t();
+
+  $fields = array();
+  $fields['field_show_type'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'field_show_type',
+    'indexes' => array(
+      'tid' => array(
+        0 => 'tid',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'taxonomy',
+    'settings' => array(
+      'allowed_values' => array(
+        0 => array(
+          'vocabulary' => 'show_type',
+          'parent' => 0,
+        ),
+      ),
+    ),
+    'translatable' => 0,
+    'type' => 'taxonomy_term_reference',
+  );
+
+  $field_bases['field_date_time'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'field_date_time',
+    'indexes' => array(),
+    'locked' => 0,
+    'module' => 'date',
+    'settings' => array(
+      'cache_count' => 4,
+      'cache_enabled' => 0,
+      'granularity' => array(
+        'day' => 'day',
+        'hour' => 'hour',
+        'minute' => 'minute',
+        'month' => 'month',
+        'second' => 0,
+        'year' => 'year',
+      ),
+      'repeat' => 0,
+      'timezone_db' => 'UTC',
+      'todate' => '',
+      'tz_handling' => 'site',
+    ),
+    'translatable' => 0,
+    'type' => 'datetime',
+  );
+
+  return $fields;
+}
+
+/**
+ * Return field instances
+ */
+function _taxonomy_field_instances() {
+  $field_instances = array();
+
+  $field_instances['node-show-field_show_type'] = array(
+    'bundle' => 'show',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'taxonomy',
+        'settings' => array(),
+        'type' => 'taxonomy_term_reference_link',
+        'weight' => 3,
+      ),
+      'teaser' => array(
+        'label' => 'above',
+        'settings' => array(),
+        'type' => 'hidden',
+        'weight' => 0,
+      ),
+    ),
+    'entity_type' => 'node',
+    'field_name' => 'field_show_type',
+    'label' => 'Show Type',
+    'required' => FALSE,
+    'settings' => array(
+      'user_register_form' => FALSE,
+    ),
+    'widget' => array(
+      'module' => 'options',
+      'settings' => array(),
+      'type' => 'options_select',
+      'weight' => -1,
+    ),
+  );
+
+  $field_instances['node-test-field_date_time'] = array(
+    'bundle' => 'test',
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'date',
+        'settings' => array(
+          'format_type' => 'long',
+          'fromto' => 'both',
+          'multiple_from' => '',
+          'multiple_number' => '',
+          'multiple_to' => '',
+          'show_repeat_rule' => 'show',
+        ),
+        'type' => 'date_default',
+        'weight' => 1,
+      ),
+      'teaser' => array(
+        'label' => 'above',
+        'settings' => array(),
+        'type' => 'hidden',
+        'weight' => 0,
+      ),
+    ),
+    'entity_type' => 'node',
+    'field_name' => 'field_date_time',
+    'label' => 'Date Time',
+    'required' => 0,
+    'settings' => array(
+      'default_value' => 'now',
+      'default_value2' => 'same',
+      'default_value_code' => '',
+      'default_value_code2' => '',
+      'user_register_form' => FALSE,
+    ),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'date',
+      'settings' => array(
+        'display_all_day' => 0,
+        'increment' => 15,
+        'input_format' => 'm/d/Y - H:i:s',
+        'input_format_custom' => '',
+        'label_position' => 'above',
+        'repeat_collapsed' => 0,
+        'text_parts' => array(),
+        'year_range' => '-3:+3',
+      ),
+      'type' => 'date_popup',
+      'weight' => -3,
+    ),
+  );
+
+  return $field_instances;
+}
+
+/**
+ * Implements hook_disable()
+ */
+function show_disable() {
+  $role = new stdClass();
+  $role->name = 'musician';
+  // $role->weight = 10;
+  user_role_delete($role);
+
+  $vocabularies = taxonomy_vocabulary_get_names();
+  dpm($vocabularies);
+  foreach ($vocabularies as $key => $value) {
+    #dpm($key);
+    #dpm($value);
+    if ($key == 'show_type') {
+      $vid = $value->vid;
+      taxonomy_vocabulary_delete($vid);
+    }
+  }
+
+  foreach (field_read_fields(array('module' => 'show')) as $field) {
+    foreach(field_read_instances(array('field_name' => $field['show_player'])) as $instance) {
+      field_delete_instance($instance);
+    }
+  }
+}
+
+/**
+ * Implements hook_field_schema().
+ */
+function show_field_schema($field) {
+  switch($field['type']) {
+    case 'show_player':
+      $columns = array(
+        'musician' => array('type' => 'int', 'not null' => FALSE, 'not null' => TRUE),
+        'instrument' => array('type' => 'int', 'not null' => FALSE, 'not null' => TRUE),
+      );
+
+      return array(
+        'columns' => $columns,
+        'indexes' => array(),
+      );
+      break;
+    default:
+      drupal_set_message(t('song_field_schema called for unexpected field'), 'error');
+  }
+}

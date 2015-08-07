@@ -1,0 +1,6 @@
+name = show
+description = A new content type of Show
+package = Shows
+core = 7.x
+files[] = show.install
+files[] = show.module

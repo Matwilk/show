@@ -1,0 +1,281 @@
+<?php
+
+require_once('utils.inc');
+require_once('entities.inc');
+
+/**
+ * Implements hook_entity_info().
+ */
+function show_entity_info() {
+
+  $info = array();
+
+  $info['instrument'] = array(
+    'label' => t('Instrument'),
+    'base table' => 'show_instruments',
+    'access callback' => 'instrument_access_callback',
+    'entity keys' => array(
+      'id' => 'id',
+      'label' => 'name',
+    ),
+    'entity class' => 'InstrumentEntity',
+    'controller class' => 'InstrumentEntityController',
+    'module' => 'show',
+    'uri callback' => 'entity_class_uri',
+    'views controller class' => 'EntityDefaultViewsController',
+    'admin ui' => array(
+      'path' => 'admin/instruments',
+      'controller class' => 'EntityDefaultUIController',
+    ),
+  );
+
+  return $info;
+}
+
+/**
+* Implementation of hook_menu().
+*/
+function show_menu() {
+  $items['instruments'] = array(
+  'title' => 'Instruments',
+  'page callback' => 'show_instruments',
+  'access callback' => TRUE,
+  'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['instruments/%'] = array(
+    'title' => 'Instruments',
+    'page callback' => 'show_view_instrument',
+    'page arguments' => array(1),
+    'access arguments' => array('access content'),
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_node_info()
+ */
+function show_node_info() {
+  return array(
+    'show' => array(
+      'name' => t('Show'),
+      'base' => 'show',
+      'description' => t('Content type for Shows'),
+      'has_title' => TRUE,
+      'title_label' => t('Show title'),
+    )
+  );
+}
+
+/**
+ * Implement hook_form()
+ */
+function show_form($node, $form_state) {
+  return node_content_form($node, $form_state);
+}
+
+/**
+ * Implement hook_node_insert())
+ */
+function show_node_update($node) {
+  dpm($node);
+  #$set_type_value = entity_metadata_wrapper('node', $node)->field_show_type->value();
+  #dpm($set_type_value);
+
+  // Determine if set type is a particular value.  If so then do and action.
+  // Currently hard-code if type == 'Pub' and send an email to current user.
+  // \todo forward, want to allow user to register an interest in a particular set type.
+
+  #if ($set_type_value->name == 'Pub') {
+  #  send_mail();
+  #}
+}
+
+/**
+ * Implements hook_field_info().
+ */
+function show_field_info() {
+  return array(
+    'show_player' => array(
+      'label' => t('Player'),
+      'description' => t('Custom Player Field'),
+      'default_widget' => 'show_player_widget',
+      'default_formatter' => 'show_player_formatter',
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_validate().
+ */
+function show_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+  foreach ($items as $delta => $item) {
+    // \todo do we need to validate?  For now just dpm the item to remind when it's being invoked
+    dpm($item);
+  }
+}
+
+/**
+ * Implements hook_field_is_empty().
+ */
+function show_field_is_empty($item, $field) {
+  $empty = $item['musician'] == 0 || $item['instrument'] == 0;
+  return $empty;
+}
+
+/**
+ * Implements hook_field_widget_info().
+ */
+function show_field_widget_info() {
+  return array(
+    'show_player_widget' => array(
+      'label' => t('Player'),
+      'field types' => array('show_player'),
+    ),
+  );
+}
+
+function show_users_by_role($role_name) {
+  $role = user_role_load_by_name($role_name);
+  $query = 'SELECT ur.uid
+    FROM {users_roles} AS ur
+    WHERE ur.rid = :rid';
+  $result = db_query($query, array(':rid' => $role->rid));
+  $uids = $result->fetchCol();
+  return user_load_multiple($uids);
+}
+
+/**
+ * Implements hook_field_widget_form().
+ */
+function show_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  switch ($instance['widget']['type']) {
+    case 'show_player_widget':
+      $element += array(
+        '#type' => 'fieldset',
+      );
+
+      $required = $element['#required'];
+      $item =& $items[$delta];
+
+      $musician_names = array(
+        0 => t(''),
+      );
+
+      $musicians = show_users_by_role('musician');
+
+      # @todo filter out users with 'musician' role
+      foreach($musicians as $key => $musician) {
+        $musician_names[$key] = $musician->name;
+      }
+
+      $element['musician'] = array(
+        '#title' => t('Musician'),
+        '#type' => 'select',
+        '#required' => $required,
+        '#options' => $musician_names,
+        '#default_value' => isset($item['musician']) ? $item['musician'] : '',
+      );
+
+      $instrument_names = array(
+        0 => t(''),
+      );
+
+      $instruments = entity_load('instrument', $ids = FALSE, $conditions = array(), $reset = TRUE);
+      foreach ($instruments as $key => $instrument) {
+        $instrument_names[$key] = $instrument->name;
+      }
+
+      $element['instrument'] = array(
+        '#title' => t('Instrument'),
+        '#type' => 'select',
+        '#required' => $required,
+        '#options' => $instrument_names,
+        '#default_value' => isset($item['instrument']) ? $item['instrument'] : '', );
+  }
+
+  return $element;
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function show_field_formatter_info() {
+  return array(
+    'show_player_formatter' => array(
+      'label' => t('Default'),
+      'field types' => array('show_player'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function show_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  dpm($items);
+  dpm($items);
+
+  $element = array();
+  #foreach ($items as $delta => $item) {
+  #  $element[$delta] = show_format_field($item);
+  #}
+
+  $headers = array(
+    t('Musician'),
+    t('Instruments'),
+  );
+
+  // Table header
+  $header = array(
+    'musician' => t('Musician'),
+    'instrument' => t('Instrument'),
+  );
+
+  $instruments = entity_load('instrument');
+  $musicians = show_users_by_role('musician');
+
+  $rows = array();
+  foreach ($items as $delta => $item) {
+    dpm($item);
+    $rows[$delta] = array(
+        'musician' => $musicians[$item['musician']]->name,
+        'instrument' => $instruments[$item['instrument']]->name,
+    );
+  }
+
+  dpm($rows);
+
+  $element[0] = array('#theme' => 'table', '#header' => $header, '#rows' => $rows,);
+  #$element[0]['#theme'] = 'table';
+  #$element[0]['#data'] = array('header' => $header, 'rows' => $rows);
+
+  return $element;
+}
+
+function show_format_field($item) {
+  $element = array(
+    '#type' => 'container',
+    '#attributes' => array( 'class' => array( 'field-item') ),
+  );
+
+  $element['name'] = array(
+    'label' => array(
+      '#type' => 'container',
+      '#attributes' => array( 'class' => array( 'field-label' )),
+      'text' => array(
+        '#markup' => t('Name'),
+      ),
+    ),
+    'item' => array(
+      '#type' => 'container',
+      '#attributes' => array( 'class' => array( 'field-item') ),
+      'text' => array(
+        '#markup' => 'Blsah',#$item['name'],
+      ),
+    ),
+  );
+
+  return $element;
+}
