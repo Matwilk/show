@@ -214,18 +214,7 @@ function show_field_formatter_info() {
  * Implements hook_field_formatter_view().
  */
 function show_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
-  dpm($items);
-  dpm($items);
-
   $element = array();
-  #foreach ($items as $delta => $item) {
-  #  $element[$delta] = show_format_field($item);
-  #}
-
-  $headers = array(
-    t('Musician'),
-    t('Instruments'),
-  );
 
   // Table header
   $header = array(
@@ -238,14 +227,11 @@ function show_field_formatter_view($entity_type, $entity, $field, $instance, $la
 
   $rows = array();
   foreach ($items as $delta => $item) {
-    dpm($item);
     $rows[$delta] = array(
         'musician' => $musicians[$item['musician']]->name,
         'instrument' => $instruments[$item['instrument']]->name,
     );
   }
-
-  dpm($rows);
 
   $element[0] = array('#theme' => 'table', '#header' => $header, '#rows' => $rows,);
   #$element[0]['#theme'] = 'table';
