@@ -64,6 +64,13 @@ function show_node_info() {
       'description' => t('Content type for Shows'),
       'has_title' => TRUE,
       'title_label' => t('Show title'),
+    ),
+    'song' => array(
+      'name' => t('Song'),
+      'base' => 'song',
+      'description' => t('Content type for Songs'),
+      'has_title' => TRUE,
+      'title_labal' => t('Song title'),
     )
   );
 }
@@ -72,6 +79,13 @@ function show_node_info() {
  * Implement hook_form()
  */
 function show_form($node, $form_state) {
+  return node_content_form($node, $form_state);
+}
+
+/**
+ * Implement hook_form()
+ */
+function song_form($node, $form_state) {
   return node_content_form($node, $form_state);
 }
 

@@ -31,9 +31,26 @@ function show_schema() {
  * Implements hook_install()
  */
 function show_install() {
+  // define the node type
+  $show = array(
+    'type' => 'show',
+    'name' => t('Show'),// Display name of the content type
+    'base' => 'node_content',
+    'title_label' => t('Show'),
+    'description' => t('To define the show.'),
+    'custom' => TRUE,
+  );
+
+  // set other node defaults not declared above
+  $content_type = node_type_set_defaults($show);
+
+  // save the content type
+  node_type_save($content_type);
+
   node_types_rebuild();
   $types = node_type_get_types();
   node_add_body_field($types['show']);
+  node_add_body_field($types['song']);
   add_custom_fields();
 }
 
@@ -41,17 +58,22 @@ function show_install() {
  * Implements hook_uninstall().
  */
 function show_uninstall() {
-    $ournewtype = 'show';
-    $sql = 'SELECT nid FROM {node} n WHERE n.type = :type';
-    $result = db_query($sql, array(':type' => $ournewtype));
-    $nodeids = array();
-    foreach ($result as $row) {
-        $nodeids[] = $row->nid;
-    }
-    node_delete_multiple($nodeids);
-    delete_custom_fields();
-    node_type_delete($ournewtype);
+    delete_content_type('show');
+    delete_content_type('song');
     field_purge_batch(500);
+}
+
+function delete_content_type($content_type) {
+  $sql = 'SELECT nid FROM {node} n WHERE n.type = :type';
+  $result = db_query($sql, array(':type' => $content_type));
+  $nodeids = array();
+  foreach ($result as $row) {
+      $nodeids[] = $row->nid;
+  }
+  node_delete_multiple($nodeids);
+  delete_custom_fields();
+  node_type_delete($content_type);
+
 }
 
 /**
@@ -311,10 +333,7 @@ function _taxonomy_field_instances() {
  * Implements hook_disable()
  */
 function show_disable() {
-  $role = new stdClass();
-  $role->name = 'musician';
-  // $role->weight = 10;
-  user_role_delete($role);
+  user_role_delete('musician');
 
   $vocabularies = taxonomy_vocabulary_get_names();
   dpm($vocabularies);
