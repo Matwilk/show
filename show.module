@@ -94,16 +94,16 @@ function song_form($node, $form_state) {
  */
 function show_node_update($node) {
   dpm($node);
-  #$set_type_value = entity_metadata_wrapper('node', $node)->field_show_type->value();
-  #dpm($set_type_value);
+  $set_type_value = entity_metadata_wrapper('node', $node)->field_show_type->value();
+  dpm($set_type_value);
 
   // Determine if set type is a particular value.  If so then do and action.
   // Currently hard-code if type == 'Pub' and send an email to current user.
   // \todo forward, want to allow user to register an interest in a particular set type.
 
-  #if ($set_type_value->name == 'Pub') {
-  #  send_mail();
-  #}
+  if ($set_type_value->name == 'Pub') {
+    send_mail();
+  }
 }
 
 /**

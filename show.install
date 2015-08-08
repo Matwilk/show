@@ -132,22 +132,24 @@ function add_vocabularies() {
 }
 
 function add_custom_fields() {
-    foreach (_taxonomy_fields() as $field) {
+    foreach (_fields() as $field) {
         field_create_field($field);
     }
-    foreach (_taxonomy_field_instances() as $fieldinstance) {
-        $fieldinstance['entity_type'] = 'node';
-        $fieldinstance['bundle'] = 'show';
+    foreach (_field_instances() as $fieldinstance) {
         dpm($fieldinstance);
         field_create_instance($fieldinstance);
     }
 }
 
 function delete_custom_fields() {
-    foreach (array_keys(_taxonomy_fields()) as $field) {
+    foreach (array_keys(_fields()) as $field) {
         field_delete_field($field);
     }
     $instances = field_info_instances('node', 'show');
+    foreach ($instances as $instance_name => $fieldinstance) {
+        field_delete_instance($fieldinstance);
+    }
+    $instances = field_info_instances('node', 'song');
     foreach ($instances as $instance_name => $fieldinstance) {
         field_delete_instance($fieldinstance);
     }
@@ -169,7 +171,7 @@ function _taxonomy_terms() {
 /**
  *  Return fields
  */
-function _taxonomy_fields() {
+function _fields() {
   $t = get_t();
 
   $fields = array();
@@ -198,7 +200,7 @@ function _taxonomy_fields() {
     'type' => 'taxonomy_term_reference',
   );
 
-  $field_bases['field_date_time'] = array(
+  $fields['field_date_time'] = array(
     'active' => 1,
     'cardinality' => 1,
     'deleted' => 0,
@@ -227,17 +229,68 @@ function _taxonomy_fields() {
     'type' => 'datetime',
   );
 
+  $fields['field_player'] = array(
+    'translatable' => '0',
+    'entity_types' => array(),
+    'settings' => array(),
+    'storage' => array(
+      'type' => 'field_sql_storage',
+      'settings' => array(),
+      'module' => 'field_sql_storage',
+      'active' => '1',
+      'details' => array(
+        'sql' => array(
+          'FIELD_LOAD_CURRENT' => array(
+            'field_data_field_player' => array(
+              'musician' => 'field_player_musician',
+              'instrument' => 'field_player_instrument',
+            ),
+          ),
+          'FIELD_LOAD_REVISION' => array(
+            'field_revision_field_player' => array(
+              'musician' => 'field_player_musician',
+              'instrument' => 'field_player_instrument',
+            ),
+          ),
+        ),
+      ),
+    ),
+    'foreign keys' => array(),
+    'indexes' => array(),
+    'field_name' => 'field_player',
+    'type' => 'show_player',
+    'module' => 'show',
+    'active' => '1',
+    'locked' => '0',
+    'cardinality' => '-1',
+    'deleted' => '0',
+    'columns' => array(
+      'musician' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'instrument' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'bundles' => array(
+      'node' => array(
+        'song',
+      ),
+    ),
+  );
+
   return $fields;
 }
 
 /**
  * Return field instances
  */
-function _taxonomy_field_instances() {
+function _field_instances() {
   $field_instances = array();
 
   $field_instances['node-show-field_show_type'] = array(
-    'bundle' => 'show',
     'default_value' => NULL,
     'deleted' => 0,
     'description' => '',
@@ -257,6 +310,7 @@ function _taxonomy_field_instances() {
       ),
     ),
     'entity_type' => 'node',
+    'bundle' => 'show',
     'field_name' => 'field_show_type',
     'label' => 'Show Type',
     'required' => FALSE,
@@ -272,7 +326,6 @@ function _taxonomy_field_instances() {
   );
 
   $field_instances['node-test-field_date_time'] = array(
-    'bundle' => 'test',
     'deleted' => 0,
     'description' => '',
     'display' => array(
@@ -298,6 +351,7 @@ function _taxonomy_field_instances() {
       ),
     ),
     'entity_type' => 'node',
+    'bundle' => 'show',
     'field_name' => 'field_date_time',
     'label' => 'Date Time',
     'required' => 0,
@@ -326,6 +380,42 @@ function _taxonomy_field_instances() {
     ),
   );
 
+  $field_instances['node-test-field_player'] = array(
+    'label' => 'Player',
+    'widget' => array(
+      'weight' => '-3',
+      'type' => 'show_player_widget',
+      'module' => 'show',
+      'active' => 0,
+      'settings' => array(),
+    ),
+    'settings' => array(
+      'user_register_form' => FALSE,
+    ),
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'type' => 'show_player_formatter',
+        'settings' => array(),
+        'module' => 'show',
+        'weight' => 1,
+      ),
+      'teaser' => array(
+        'type' => 'hidden',
+        'label' => 'above',
+        'settings' => array(),
+        'weight' => 0,
+      ),
+    ),
+    'required' => 0,
+    'description' => '',
+    'default_value' => NULL,
+    'field_name' => 'field_player',
+    'entity_type' => 'node',
+    'bundle' => 'song',
+    'deleted' => '0',
+  );
+
   return $field_instances;
 }
 
@@ -333,6 +423,8 @@ function _taxonomy_field_instances() {
  * Implements hook_disable()
  */
 function show_disable() {
+  # @work out if it's possible to disable without having to manually delete the field_player
+
   user_role_delete('musician');
 
   $vocabularies = taxonomy_vocabulary_get_names();
