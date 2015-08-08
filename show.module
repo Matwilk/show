@@ -190,6 +190,11 @@ function show_field_widget_form(&$form, &$form_state, $field, $instance, $langco
         '#required' => $required,
         '#options' => $musician_names,
         '#default_value' => isset($item['musician']) ? $item['musician'] : '',
+        '#attached' => array(
+          'css' => array(drupal_get_path('module', 'show') . '/show.css'),
+          ),
+        '#prefix' => '<div class="song-player-field song-player-musician-field">',
+        '#suffix' => '</div>',
       );
 
       $instrument_names = array(
@@ -206,7 +211,13 @@ function show_field_widget_form(&$form, &$form_state, $field, $instance, $langco
         '#type' => 'select',
         '#required' => $required,
         '#options' => $instrument_names,
-        '#default_value' => isset($item['instrument']) ? $item['instrument'] : '', );
+        '#default_value' => isset($item['instrument']) ? $item['instrument'] : '',
+        '#attached' => array(
+          'css' => array(drupal_get_path('module', 'show') . '/show.css'),
+          ),
+        '#prefix' => '<div class="song-player-field song-player-instrument-field">',
+        '#suffix' => '</div>',
+      );
   }
 
   return $element;
