@@ -94,15 +94,18 @@ function song_form($node, $form_state) {
  */
 function show_node_update($node) {
   dpm($node);
-  $set_type_value = entity_metadata_wrapper('node', $node)->field_show_type->value();
-  dpm($set_type_value);
 
-  // Determine if set type is a particular value.  If so then do and action.
-  // Currently hard-code if type == 'Pub' and send an email to current user.
-  // \todo forward, want to allow user to register an interest in a particular set type.
+  if ($node->type == 'show') {
+    $set_type_value = entity_metadata_wrapper('node', $node)->field_show_type->value();
+    dpm($set_type_value);
 
-  if ($set_type_value->name == 'Pub') {
-    send_mail();
+    // Determine if set type is a particular value.  If so then do and action.
+    // Currently hard-code if type == 'Pub' and send an email to current user.
+    // \todo forward, want to allow user to register an interest in a particular set type.
+
+    if ($set_type_value->name == 'Pub') {
+      send_mail();
+    }
   }
 }
 
@@ -192,7 +195,7 @@ function show_field_widget_form(&$form, &$form_state, $field, $instance, $langco
         '#default_value' => isset($item['musician']) ? $item['musician'] : '',
         '#attached' => array(
           'css' => array(drupal_get_path('module', 'show') . '/show.css'),
-          ),
+        ),
         '#prefix' => '<div class="song-player-field song-player-musician-field">',
         '#suffix' => '</div>',
       );
@@ -259,6 +262,7 @@ function show_field_formatter_view($entity_type, $entity, $field, $instance, $la
   }
 
   $element[0] = array('#theme' => 'table', '#header' => $header, '#rows' => $rows,);
+
   #$element[0]['#theme'] = 'table';
   #$element[0]['#data'] = array('header' => $header, 'rows' => $rows);
 
