@@ -4,3 +4,4 @@ package = Shows
 core = 7.x
 files[] = show.install
 files[] = show.module
+scripts[] = script.js
